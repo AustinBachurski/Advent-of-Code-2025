@@ -20,6 +20,7 @@ template <typename T> T stringviewToNumber(std::string_view sv)
 
     auto [_, ec]{ std::from_chars(std::to_address(sv.begin()),
                                   std::to_address(sv.end()), number) };
+
     if (ec != std::errc{})
     {
         throw std::invalid_argument(
@@ -28,7 +29,6 @@ template <typename T> T stringviewToNumber(std::string_view sv)
 
     return number;
 }
-
 
 } //namespace common
 
