@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+if [[ ! -d .build ]]; then
+    cmake -B .build
+    ln -sf .build/compile_commands.json .
+fi
+
+cmake --build .build
+
+./bin/solve_$1
+
