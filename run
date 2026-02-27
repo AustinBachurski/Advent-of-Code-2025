@@ -7,5 +7,24 @@ fi
 
 cmake --build .build
 
-./bin/solve_$1
+echo ''
+
+if [[ -z $1 ]]; then
+    echo "No run argument passed."
+elif [[ $1 == "--all" ]]; then
+    ./bin/solve_day01
+    ./bin/solve_day02
+    ./bin/solve_day03
+    ./bin/solve_day04
+    ./bin/solve_day05
+    ./bin/solve_day06
+    ./bin/solve_day07
+    ./bin/solve_day08
+    ./bin/solve_day09
+    ./bin/solve_day10
+    ./bin/solve_day11
+    ./bin/solve_day12
+else
+    ./bin/solve_$1
+fi
 
