@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -25,7 +26,6 @@ std::string readEntireInputFile(std::string_view fileName)
 
     return { std::istreambuf_iterator<char>(file),
              std::istreambuf_iterator<char>() };
-
 }
 
 } //namespace common
