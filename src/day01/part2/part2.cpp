@@ -15,49 +15,18 @@ constexpr int dialZero{ 0 };
 
 int rotateLeft(int dial, int &counter, int ticks)
 {
-    int modResult{ ticks % dial100 };
-    counter += ticks / dial100;
+    dial = dial ? dial100 - dial + ticks : dial + ticks;
+    counter += dial / dial100;
+    dial %= dial100;
 
-    if (!modResult)
-    {
-        return dial;
-    }
-
-    if (!dial)
-    {
-        return dial100 - modResult;
-    }
-
-    dial -= modResult;
-
-    if (dial > dialZero)
-    {
-        return dial;
-    }
-
-    ++counter;
-    return dial == dialZero ? dial : dial100 + dial;
+    return dial ? dial100 - dial : dialZero;
 }
 
 int rotateRight(int dial, int &counter, int ticks)
 {
-    int modResult{ ticks % dial100 };
-    counter += ticks / dial100;
-
-    if (!modResult)
-    {
-        return dial;
-    }
-
-    dial += modResult;
-
-    if (dial < dial100)
-    {
-        return dial;
-    }
-
-    ++counter;
-    return dial == dial100 ? dialZero : dial - dial100;
+    dial += ticks;
+    counter += dial / dial100;
+    return dial % dial100;
 }
 
 }
