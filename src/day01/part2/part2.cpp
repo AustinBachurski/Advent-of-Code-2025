@@ -1,7 +1,6 @@
 #include "day01/part2/part2.hpp"
 #include "common/common.hpp"
 
-#include <ranges>
 #include <string>
 #include <string_view>
 
@@ -38,9 +37,7 @@ std::string solve()
 {
     std::string file{ common::readEntireInputFile("day01.txt") };
 
-    auto rotations{ file | std::views::split('\n')
-                         | std::views::transform([](auto &&each)
-                             { return std::string_view{ each }; }) };
+    auto rotations{ common::splitStringOn(file, '\n') };
 
     int counter{};
     int dial{ 50 };

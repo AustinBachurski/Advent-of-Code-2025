@@ -3,6 +3,7 @@
 
 #include <charconv>
 #include <format>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -14,7 +15,8 @@ namespace common
 
 std::string readEntireInputFile(std::string_view fileName);
 
-template <typename T> T stringviewToNumber(std::string_view sv)
+template <typename T>
+T stringviewToNumber(std::string_view sv)
 {
     T number{};
 
@@ -28,6 +30,13 @@ template <typename T> T stringviewToNumber(std::string_view sv)
     }
 
     return number;
+}
+
+auto splitStringOn(std::string_view string, auto separator)
+{
+    return string | std::views::split(separator)
+                  | std::views::transform([](auto &&each)
+                            { return std::string_view{ each }; });
 }
 
 } //namespace common
