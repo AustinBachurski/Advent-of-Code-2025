@@ -13,7 +13,10 @@ namespace day04::part1
 
 std::string solve()
 {
-    return "Part 1 solution.";
+    std::string file{ common::readEntireInputFile("day04.txt") };
+
+
+    return file;
 }
 
 } // namespace day04::part1
