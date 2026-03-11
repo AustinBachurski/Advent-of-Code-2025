@@ -1,10 +1,7 @@
 #include "day06/part2/part2.hpp"
 #include "common/common.hpp"
 
-#include <algorithm>
-#include <charconv>
 #include <cstddef>
-#include <iterator>
 #include <ranges>
 #include <span>
 #include <string>
@@ -28,29 +25,29 @@ struct Problem
     Operation op{};
 };
 
-//std::size_t addIndexOf(std::size_t i, std::span<std::vector<std::size_t>> rows)
-//{
-//    std::size_t sum{};
-//
-//    for (auto const &row : rows)
-//    {
-//        sum += row.at(i);
-//    }
-//
-//    return sum;
-//}
-//
-//std::size_t mulIndexOf(std::size_t i, std::span<std::vector<std::size_t>> rows)
-//{
-//    std::size_t product{ rows.front().at(i) };
-//
-//    for (auto const &row : rows | std::views::drop(1))
-//    {
-//        product *= row.at(i);
-//    }
-//
-//    return product;
-//}
+std::size_t performAddition(std::span<std::size_t const> numbers)
+{
+    std::size_t sum{};
+
+    for (auto const number : numbers)
+    {
+        sum += number;
+    }
+
+    return sum;
+}
+
+std::size_t performMultiplication(std::span<std::size_t const> numbers)
+{
+    std::size_t product{ numbers.front() };
+
+    for (auto const number : numbers | std::views::drop(1))
+    {
+        product *= number;
+    }
+
+    return product;
+}
 
 std::vector<Problem> extractProblems(std::span<std::string_view> rows)
 {
@@ -109,6 +106,25 @@ std::vector<Problem> extractProblems(std::span<std::string_view> rows)
     return problems;
 }
 
+std::size_t solveProblems(std::span<Problem const> problems)
+{
+    std::size_t result{};
+
+    for (auto const &problem : problems)
+    {
+        if (problem.op == Operation::Add)
+        {
+            result += performAddition(problem.numbers);
+        }
+        else
+        {
+            result += performMultiplication(problem.numbers);
+        }
+    }
+
+    return result;
+}
+
 } // anonymous namespace
 
 namespace day06::part2
@@ -121,8 +137,9 @@ std::string solve()
     rows.append_range( common::splitStringOn(file, '\n'));
 
     auto problems{ extractProblems(rows) };
+    std::size_t result{ solveProblems(problems) };
 
-    return "";
+    return std::to_string(result);
 }
 
 } // namespace day06::part2
