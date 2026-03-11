@@ -36,7 +36,9 @@ auto splitStringOn(std::string_view string, auto separator)
 {
     return string | std::views::split(separator)
                   | std::views::transform([](auto &&each)
-                            { return std::string_view{ each }; });
+                            { return std::string_view{ each }; })
+                  | std::views::filter([](auto sv)
+                            { return !sv.empty(); });
 }
 
 } //namespace common
