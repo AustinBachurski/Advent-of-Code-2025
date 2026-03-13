@@ -1,8 +1,11 @@
 #include "day08/part1/part1.hpp"
 #include "common/common.hpp"
 
-#include <cmath>
+#include <algorithm>
+#include <cassert>
 #include <compare>
+#include <cstdint>
+#include <iterator>
 #include <map>
 #include <ranges>
 #include <set>
@@ -17,51 +20,57 @@ namespace
 class Box
 {
 public:
-    Box(int const x, int const y, int const z)
-    : m_x{ x }
-    , m_y{ y }
-    , m_z{ z }
+    Box() = default;
+    Box(int64_t const x, int64_t const y, int64_t const z)
+        : m_x{ x }
+        , m_y{ y }
+        , m_z{ z }
     {}
 
-    double distanceTo(Box const &other) const
+    int64_t distanceTo(Box const &other) const
     {
-        return std::sqrt(
-            (m_x - other.m_x) * (m_x - other.m_x)
-            + (m_y - other.m_y) * (m_y - other.m_y)
-            + (m_z - other.m_z) * (m_z - other.m_z)
-        );
+        // Taking the square root doesn't really matter here as we're not
+        // concerned with the actual distance, just which is smallest.
+        return (m_x - other.m_x) * (m_x - other.m_x)
+        + (m_y - other.m_y) * (m_y - other.m_y)
+        + (m_z - other.m_z) * (m_z - other.m_z) ;
     }
 
     auto operator<=>(Box const &other) const = default;
 
 private:
-    int m_x{};
-    int m_y{};
-    int m_z{};
+    int64_t m_x{};
+    int64_t m_y{};
+    int64_t m_z{};
 };
 
-class CloseBoxPair
+class BoxPair
 {
 public:
-    CloseBoxPair(Box const &a, Box const &b)
-    : m_a{ a }
-    , m_b{ b }
+    BoxPair() = default;
+    BoxPair(Box const &a, Box const &b)
+        : m_a{ a }
+        , m_b{ b }
     {}
 
-    bool operator==(CloseBoxPair const &other) const noexcept
+    // Ordering doesn't actually matter, just wanting to make sure that a pair
+    // of boxes is in a set only once regardless of the ordering of the boxes
+    // in the pair.
+    bool operator<(BoxPair const &other) const noexcept
     {
-        return (m_a == other.m_a && m_b == other.m_b)
-        || (m_a == other.m_b && m_b == other.m_a);
+        return !((m_a == other.m_a && m_b == other.m_b)
+        || (m_a == other.m_b && m_b == other.m_a));
     }
 
-    bool operator<(CloseBoxPair const &other) const noexcept
+    bool contains(Box const &other) const noexcept
     {
-        return m_a < other.m_a;
+        return m_a == other || m_b == other;
     }
 
-    bool isConnectionOf(CloseBoxPair const &other) const noexcept
+    void insertBoxesInto(std::set<Box> &set)
     {
-        return m_a == other.m_a || m_b == other.m_b;
+        set.insert(m_a);
+        set.insert(m_b);
     }
 
 private:
@@ -71,10 +80,11 @@ private:
 
 Box makeBox(auto tripletIter)
 {
+    // Assert at call site confirms 3 elements.
     return {
-        common::stringviewToNumber<int>(*tripletIter++),
-        common::stringviewToNumber<int>(*tripletIter++),
-        common::stringviewToNumber<int>(*tripletIter)
+        common::stringviewToNumber<int64_t>(*tripletIter++),
+        common::stringviewToNumber<int64_t>(*tripletIter++),
+        common::stringviewToNumber<int64_t>(*tripletIter)
     };
 }
 
@@ -85,15 +95,17 @@ std::vector<Box> extractBoxesFromInput(auto coordinates)
     for (auto coordinate : coordinates)
     {
         auto triplet{ common::splitStringOn(coordinate, ',') };
+
+        assert(std::distance(triplet.begin(), triplet.end()) == 3);
         boxes.push_back(makeBox(triplet.begin()));
     }
 
     return boxes;
 }
 
-std::map<double, std::set<CloseBoxPair>> generateDistancesBetween(std::span<Box const> boxes)
+std::map<int64_t, BoxPair> generateDistancesBetween(std::span<Box const> boxes)
 {
-    std::map<double, std::set<CloseBoxPair>> distances;
+    std::map<int64_t, BoxPair> distances;
 
     for (auto const &box : boxes)
     {
@@ -104,66 +116,81 @@ std::map<double, std::set<CloseBoxPair>> generateDistancesBetween(std::span<Box 
 
             auto d{ box.distanceTo(otherBox) };
 
-            distances[d].insert({ box, otherBox });
+            distances[d] = { box, otherBox };
         }
     }
 
     return distances;
 }
 
-bool containsConnectionPoint(std::set<CloseBoxPair> set, CloseBoxPair pair)
+long countConnectionPoints(std::set<Box> set, BoxPair pair)
 {
-    for (auto const existing : set)
-    {
-        if (existing.isConnectionOf(pair))
-        {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::count_if(set, [&pair](Box const &existing)
+                                 { return pair.contains(existing); });
 }
 
-std::vector<std::set<CloseBoxPair>> connectClosestNBoxes(
-    std::map<double, std::set<CloseBoxPair>> distances, int n)
+std::vector<std::size_t> connectionFoundIn(
+    std::span<std::set<Box>> const circuits, BoxPair const &pair)
 {
-    std::vector<std::set<CloseBoxPair>> connections;
+    std::vector<std::size_t> indices;
+
+    for (auto&& [i, set] : std::views::enumerate(circuits))
+    {
+        if (std::ranges::any_of(set, [&pair](Box const &box)
+                                { return pair.contains(box); }))
+        {
+            indices.push_back(static_cast<std::size_t>(i));
+        }
+    }
+
+    return indices;
+}
+
+std::vector<std::set<Box>> connectClosestNBoxes(
+    std::map<int64_t, BoxPair> &distances, int n)
+{
+    std::vector<std::set<Box>> circuits;
 
     int linkCount{};
 
-    // Loop over sorted distances.
-    for (auto &&[distance, pairs] : distances)
+    for (auto &&[distance, pair] : distances)
     {
-        // Grab all paired boxes for current distance.
-        for (auto const &pair : pairs)
+        auto indices{ connectionFoundIn(circuits, pair) };
+
+        // New connection.
+        if (indices.empty())
         {
-            // Add to existing connection if exists.
-            for (auto &set : connections)
+            ++linkCount;
+            circuits.emplace_back();
+            pair.insertBoxesInto(circuits.back());
+        }
+        // Add to existing connection.
+        else if (indices.size() == 1uz)
+        {
+            ++linkCount;
+            auto &targetSet{ circuits.at(indices.front()) };
+
+            // If the pair is already in the same circuit, nothing happens!
+            if (countConnectionPoints(targetSet, pair) != 2)
             {
-                if (containsConnectionPoint(set, pair))
-                {
-                    set.insert(pair);
-
-                    if (++linkCount == n)
-                    {
-                        return connections;
-                    }
-
-                    break;
-                }
-            }
-
-            // Else add a new set of connections with current pair.
-            connections.emplace_back();
-            connections.back().insert(pair);
-
-            if (++linkCount == n)
-            {
-                return connections;
+                pair.insertBoxesInto(targetSet);
             }
         }
+        // Bridge existing connections.
+        else
+        {
+            ++linkCount;
+            auto &destinationSet{ circuits.at(indices.front()) };
+            auto &sourceSet{ circuits.at(indices.back()) };
+            destinationSet.insert_range(sourceSet);
+            circuits.erase(circuits.begin() + static_cast<int64_t>(indices.back()));
+        }
+
+        if (linkCount == n)
+        { return circuits; }
     }
 
-    return connections;
+    return circuits;
 }
 
 } // anonymous namespace
@@ -177,11 +204,16 @@ std::string solve()
     auto coordinates{ common::splitStringOn(file, '\n') };
     auto boxes{ extractBoxesFromInput(coordinates) };
     auto distances{ generateDistancesBetween(boxes) };
-    auto connections{ connectClosestNBoxes(distances, 10) };
+    auto circuits{ connectClosestNBoxes(distances, 1000) };
 
-    std::size_t product{1};
+    std::ranges::sort(circuits, [](std::set<Box> const &lhs,
+                                   std::set<Box> const &rhs)
+                      { return lhs.size() > rhs.size(); });
 
-    for (auto const &set : connections | std::views::take(3))
+    auto product{ circuits.front().size() };
+
+    for (auto const &set : circuits | std::views::take(3)
+                                    | std::views::drop(1))
     {
         product *= set.size();
     }
