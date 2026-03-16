@@ -38,7 +38,7 @@ int windingNumber(polygon::Point const &point,
         line = { pair.front(), pair.back() };
 
         if (pointLiesOnLine(point, line))
-        { return 0; }
+        { return 1; }
 
         if (line.start.y <= point.y)
         {
@@ -59,19 +59,17 @@ int windingNumber(polygon::Point const &point,
     return winding;
 }
 
-
-
 } // anonymous namespace
 
 namespace winding
 {
 
-bool pointsAreContained( std::span<polygon::Point const, 4> points,
+bool pointsAreContained(std::span<polygon::Point const, 4> points,
                         std::span<polygon::Point const> outer)
 {
     for (auto const &point : points)
     {
-        if (windingNumber(point, outer))
+        if (!windingNumber(point, outer))
         {
             return false;
         }
