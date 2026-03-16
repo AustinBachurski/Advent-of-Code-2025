@@ -1,12 +1,13 @@
 #include "day09/part2/part2.hpp"
 #include "common/common.hpp"
+#include "day09/part2/polygon.hpp"
+#include "day09/part2/windingNumberAlgo.hpp"
 
-#include <algorithm>
 #include <cassert>
-#include <compare>
 #include <cstdint>
 #include <cstdlib>
-#include <print>
+#include <map>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -15,17 +16,9 @@
 namespace
 {
 
-struct Point
+std::vector<polygon::Point> extractPointsFromInput(auto coordinates)
 {
-    int64_t x{};
-    int64_t y{};
-
-    auto operator<=>(Point const &other) const = default;
-};
-
-std::vector<Point> extractPointsFromInput(auto coordinates)
-{
-    std::vector<Point> points;
+    std::vector<polygon::Point> points;
 
     for (auto coordinate : coordinates)
     {
@@ -39,9 +32,10 @@ std::vector<Point> extractPointsFromInput(auto coordinates)
     return points;
 }
 
-int64_t calculateMaxArea(std::span<Point const> points)
+std::map<int64_t, std::vector<polygon::Rectangle>, std::greater<int64_t>>
+findLargestAreaRectangles(std::span<polygon::Point const> points)
 {
-    int64_t max{};
+    std::map<int64_t, std::vector<polygon::Rectangle>, std::greater<int64_t>> areas;
 
     for (auto const p : points)
     {
@@ -54,13 +48,48 @@ int64_t calculateMaxArea(std::span<Point const> points)
             int64_t xResult{ std::abs(p.x - otherP.x) + 1 };
             int64_t yResult{ std::abs(p.y - otherP.y) + 1 };
 
-            max = std::max(max, xResult * yResult);
+            auto area{ xResult * yResult };
 
-             std::println("{}:{},{}|{},{}", xResult * yResult, p.x, p.y, otherP.x, otherP.y);
+            areas[area].emplace_back(
+                polygon::Point{ .x = p.x, .y = p.y },
+                polygon::Point{ .x = p.x, .y = otherP.y },
+                polygon::Point{ .x = otherP.x, .y = otherP.y },
+                polygon::Point{ .x = otherP.x, .y = p.y }
+            );
         }
     }
 
-    return max;
+    return areas;
+}
+
+//bool edgesAreContained(
+//    std::span<polygon::Point const, 4> points, std::span<polygon::Point const> outer)
+//{
+//    return true;
+//}
+
+bool isContained(polygon::Rectangle rectangle, std::span<polygon::Point const> outer)
+{
+    return winding::pointsAreContained(rectangle.points, outer);
+    //&& edgesAreContained(rectangle.points, outer);
+}
+
+int64_t findLargestContainedRectangle(
+    std::map<int64_t, std::vector<polygon::Rectangle>, std::greater<int64_t>> largestAreas,
+    std::span<polygon::Point const> outer)
+{
+    for (auto&& [area, rectangles] : largestAreas)
+    {
+        for (auto const &rectangle : rectangles)
+        {
+            if (isContained(rectangle, outer))
+            {
+                return area;
+            }
+        }
+    }
+
+    throw std::runtime_error("Didn't find any enclosed rectangles.");
 }
 
 } // anonymous namespace
@@ -73,8 +102,12 @@ std::string solve()
     auto file{ common::readEntireInputFile("day09.txt") };
     auto coordinates{ common::splitStringOn(file, '\n') };
     auto points{ extractPointsFromInput(coordinates) };
+    auto largestAreasForVectors{ findLargestAreaRectangles(points) };
 
-    return std::to_string(calculateMaxArea(points));
+    int64_t largestArea{
+        findLargestContainedRectangle(largestAreasForVectors, points) };
+
+    return std::to_string(largestArea);
 }
 
 } // namespace day09::part2
