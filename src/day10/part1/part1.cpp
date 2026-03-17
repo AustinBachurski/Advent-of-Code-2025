@@ -79,7 +79,16 @@ int findBestSequenceOfButtonsToTarget(std::bitset<N> const target,
                                       std::span<std::bitset<N> const> buttons)
 {
     std::unordered_set<std::bitset<N>> values;
-    values.insert_range(buttons);
+
+    for (auto const button : buttons)
+    {
+        if (button == target)
+        {
+            return 1;
+        }
+
+        values.insert(button);
+    }
 
     std::vector<std::bitset<N>> insertBuffer;
     insertBuffer.reserve(buttons.size());
