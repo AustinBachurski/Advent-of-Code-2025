@@ -1,6 +1,7 @@
 #include "day09/part2/part2.hpp"
 #include "common/common.hpp"
 #include "day09/part2/polygon.hpp"
+#include "day09/part2/intersection.hpp"
 #include "day09/part2/windingNumberAlgo.hpp"
 
 #include <cassert>
@@ -62,16 +63,10 @@ findLargestAreaRectangles(std::span<polygon::Point const> points)
     return areas;
 }
 
-//bool edgesAreContained(
-//    std::span<polygon::Point const, 4> points, std::span<polygon::Point const> outer)
-//{
-//    return true;
-//}
-
 bool isContained(polygon::Rectangle rectangle, std::span<polygon::Point const> outer)
 {
-    return winding::pointsAreContained(rectangle.points, outer);
-    //&& edgesAreContained(rectangle.points, outer);
+    return winding::pointsAreContained(rectangle.points, outer)
+    && intersection::edgesAreContained(rectangle.points, outer);
 }
 
 int64_t findLargestContainedRectangle(

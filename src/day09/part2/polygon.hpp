@@ -32,6 +32,12 @@ struct Rectangle
     std::array<Point, 4> points;
 };
 
+int64_t crossProduct(polygon::LineSegment const &line,
+                     polygon::Point const &point);
+
+bool pointLiesOnLine(polygon::Point const & point,
+                     polygon::LineSegment const &line);
+
 } //namespace polygon
 
 #endif
