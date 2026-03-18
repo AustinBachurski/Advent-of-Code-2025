@@ -7,6 +7,7 @@
 #include <iterator>
 #include <iostream>
 #include <ranges>
+#include <stdexcept>
 #include <unordered_set>
 #include <span>
 #include <string>
@@ -78,58 +79,54 @@ std::vector<std::bitset<N>> extractButtons(auto schematic)
 int findBestSequenceOfButtonsToTarget(std::bitset<N> const target,
                                       std::span<std::bitset<N> const> buttons)
 {
-    std::unordered_set<std::bitset<N>> values;
+    if (target.none())
+    { return 0; }
+
+    std::unordered_set<std::bitset<N>> seen;
+    std::vector<std::bitset<N>> currentValues;
+    currentValues.reserve(buttons.size());
 
     for (auto const button : buttons)
     {
         if (button == target)
-        {
-            return 1;
-        }
-
-        values.insert(button);
+        { return 1; }
+        
+        seen.insert(button);
+        currentValues.push_back(button);
     }
 
-    std::vector<std::bitset<N>> insertBuffer;
-    insertBuffer.reserve(buttons.size());
-    std::vector<std::bitset<N>> removeBuffer;
-    removeBuffer.reserve(buttons.size());
+    std::vector<std::bitset<N>> nextValues;
+    nextValues.reserve(buttons.size());
 
     int buttonPresses{ 1 };
 
-    while (true)
+    while (!currentValues.empty())
     {
         ++buttonPresses;
 
-        for (auto const value : values)
+        for (auto const value : currentValues)
         {
             for (auto const button : buttons)
             {
                 auto current{ value ^ button };
 
                 if (current == target)
-                {
-                    return buttonPresses;
-                }
+                { return buttonPresses; }
 
-                if (!values.contains(current))
+                if (!seen.contains(current))
                 {
-                    insertBuffer.push_back(current);
-                    removeBuffer.push_back(value);
+                    seen.insert(current);
+                    nextValues.push_back(current);
                 }
             }
         }
 
-        for (auto const each : removeBuffer)
-        {
-            values.erase(each);
-        }
-
-        values.insert_range(insertBuffer);
-        insertBuffer.clear();
-
-        removeBuffer.clear();
+        std::swap(currentValues, nextValues);
+        nextValues.clear(); 
     }
+
+    throw std::runtime_error(
+        "Possible values exhausted before target was found.");
 }
 
 int buttonPressesRequired(auto manualLine)
