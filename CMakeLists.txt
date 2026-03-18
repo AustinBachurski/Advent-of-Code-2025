@@ -16,7 +16,7 @@ target_include_directories(projectCompileFlags INTERFACE
 target_compile_features(projectCompileFlags INTERFACE cxx_std_26)
 
 target_compile_options(projectCompileFlags INTERFACE
-    -O3
+    -O0
     -g3
     -Werror
     -Wall
