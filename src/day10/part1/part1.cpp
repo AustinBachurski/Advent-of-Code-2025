@@ -5,7 +5,6 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
-#include <iostream>
 #include <ranges>
 #include <stdexcept>
 #include <unordered_set>
