@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <print>
 #include <ranges>
 #include <stdexcept>
 #include <unordered_set>
@@ -67,7 +68,6 @@ JoltageValue extractTarget(auto segments)
         values.push_back(common::stringviewToNumber<unsigned>(number));
     }
 
-    values.front() += 12;
     return { values };
 }
 
@@ -179,7 +179,10 @@ int findBestSequenceOfButtonsToTarget(JoltageValue const &target,
                 auto current{ pressButtonOnValue(button, value) };
 
                 if (current == target)
-                { return buttonPresses; }
+                {
+                    std::println("Found with {} presses.", buttonPresses);
+                    return buttonPresses;
+                }
 
                 if (anyValueHasOverrun(current.values, target.values))
                 {
