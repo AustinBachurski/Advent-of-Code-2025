@@ -1,10 +1,11 @@
-#include "day10/part2/part2.hpp"
+
 #include "common/common.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <iterator>
 #include <limits>
+#include <print>
 #include <ranges>
 #include <span>
 #include <string>
@@ -61,7 +62,7 @@ struct JoltageValue
 
 struct Button
 {
-    std::vector<unsigned> const indices;
+    std::vector<unsigned> indices;
 };
 
 class Solver
@@ -92,7 +93,6 @@ private:
             return;
         }
 
-        recursiveSolve(index);
         recursiveSolve(index + 1UZ);
 
         press(buttons_.at(index));
@@ -219,7 +219,10 @@ namespace day10::part2
 
         for (auto line : lines)
         {
-            sum += buttonPressesRequired(line);
+            auto result{ buttonPressesRequired(line) };
+            sum += result;
+
+            std::println("{}", result);
         }
 
         return std::to_string(sum);
