@@ -1,16 +1,11 @@
 #include "day10/part2/part2.hpp"
 #include "common/common.hpp"
 
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <functional>
 #include <iterator>
-#include <print>
+#include <limits>
 #include <ranges>
-#include <stdexcept>
-#include <unordered_set>
-#include <utility>
 #include <span>
 #include <string>
 #include <string_view>
@@ -25,28 +20,116 @@ constexpr int joltageDiagram{ 1 };
 
 struct JoltageValue
 {
-    std::vector<unsigned> const values;
-    auto operator<=>(JoltageValue const &other) const = default;
-};
+    std::vector<unsigned> values;
 
-struct JoltageHasher
-{
-    std::size_t operator()(JoltageValue const &value) const noexcept
+    bool operator==(JoltageValue const &other) const
     {
-        std::size_t hash{};
-
-        for (auto&& [i, number] : std::views::enumerate(value.values))
+        for (auto const i : std::views::iota(0UZ, values.size()))
         {
-            hash ^= std::hash<std::size_t>{}(number) << i;
+            if (values.at(i) != other.values.at(i))
+            {
+                return false;
+            }
         }
+        return true;
+    }
 
-        return hash;
+    bool operator<=(JoltageValue const &other) const
+    {
+        for (auto const i : std::views::iota(0UZ, values.size()))
+        {
+            if (values.at(i) > other.values.at(i))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool operator>=(JoltageValue const &other) const
+    {
+        for (auto const i : std::views::iota(0UZ, values.size()))
+        {
+            if (values.at(i) < other.values.at(i))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 };
 
 struct Button
 {
     std::vector<unsigned> const indices;
+};
+
+class Solver
+{
+public:
+    Solver(JoltageValue const &target, std::span<Button const> buttons)
+        : target_{ target }
+        , buttons_{ buttons }
+        {
+            currentValue_.values.resize(target.values.size());
+        }
+
+    int solve()
+    {
+        recursiveSolve(0UZ);
+        return bestCount_;
+    }
+
+private:
+    void recursiveSolve(std::size_t index)
+    {
+        if (index >= buttons_.size() || currentValue_ >= target_)
+        {
+            if (currentValue_ == target_)
+            {
+                bestCount_ = currentCount_ < bestCount_ ? currentCount_ : bestCount_;
+            }
+            return;
+        }
+
+        recursiveSolve(index);
+        recursiveSolve(index + 1UZ);
+
+        press(buttons_.at(index));
+        ++currentCount_;
+
+        if (currentValue_ <= target_)
+        {
+            recursiveSolve(index);
+            recursiveSolve(index + 1UZ);
+        }
+
+        unpress(buttons_.at(index));
+        --currentCount_;
+    }
+
+    void press(Button const &button)
+    {
+        for (auto const i : button.indices)
+        {
+            ++currentValue_.values.at(i);
+        }
+    }
+
+    void unpress(Button const &button)
+    {
+        for (auto const i : button.indices)
+        {
+            --currentValue_.values.at(i);
+        }
+    }
+
+private:
+    JoltageValue const &target_;
+    std::span<Button const> buttons_;
+    int bestCount_{ std::numeric_limits<int>::max() };
+    int currentCount_{};
+    JoltageValue currentValue_;
 };
 
 JoltageValue extractTarget(auto segments)
@@ -61,7 +144,7 @@ JoltageValue extractTarget(auto segments)
 
     // Skip leading brace.
     values.push_back(
-        common::stringviewToNumber<unsigned>(targets.front().substr(1)));
+            common::stringviewToNumber<unsigned>(targets.front().substr(1)));
 
     for (auto number : targets | std::views::drop(1))
     {
@@ -90,15 +173,15 @@ std::vector<Button> extractButtons(auto schematic)
 {
     auto buttonCount{
         std::distance(schematic.begin(), schematic.end())
-        - lightDiagram
-        - joltageDiagram
+            - lightDiagram
+            - joltageDiagram
     };
 
     std::vector<Button> buttons;
     buttons.reserve(static_cast<std::size_t>(buttonCount));
 
     for (auto buttonDiagram : schematic | std::views::drop(lightDiagram)
-    | std::views::take(buttonCount))
+            | std::views::take(buttonCount))
     {
         buttons.push_back(makeButton(buttonDiagram));
     }
@@ -106,103 +189,11 @@ std::vector<Button> extractButtons(auto schematic)
     return buttons;
 }
 
-JoltageValue pressButtonOnValue(Button const &button,
-                                JoltageValue const &value)
-{
-    std::vector<unsigned> result = value.values;
-
-    for (auto const i : button.indices)
-    {
-        ++result.at(i);
-    }
-
-    return { result };
-}
-
-std::vector<JoltageValue> setInitialValues(JoltageValue const &target,
-                                           std::span<Button const> buttons)
-{
-    std::vector<JoltageValue> initial;
-    initial.reserve(buttons.front().indices.size());
-
-    for (auto const &button : buttons)
-    {
-        std::vector<unsigned> values;
-        values.resize(target.values.size());
-
-        for (auto const i : button.indices)
-        {
-            ++values.at(i);
-        }
-
-        initial.emplace_back(values);
-    }
-
-    return initial;
-}
-
-bool anyValueHasOverrun(
-    std::span<unsigned const> current, std::span<unsigned const> target)
-{
-    for (auto&& [c, t] : std::views::zip(current, target))
-    {
-        if (c > t)
-        { return true; }
-    }
-
-    return false;
-}
-
 int findBestSequenceOfButtonsToTarget(JoltageValue const &target,
-                                      std::span<Button const> buttons)
+        std::span<Button const> buttons)
 {
-    std::unordered_set<JoltageValue, JoltageHasher> seen;
-    auto currentValues{ setInitialValues(target, buttons) };
-
-    if (std::ranges::any_of(currentValues, [&target](JoltageValue const &value)
-                            { return value == target; }))
-    { return 1; }
-
-    std::vector<JoltageValue> nextValues;
-    nextValues.reserve(currentValues.size());
-
-    int buttonPresses{ 1 };
-
-    while (!currentValues.empty())
-    {
-        ++buttonPresses;
-
-        for (auto const &value : currentValues)
-        {
-            for (auto const &button : buttons)
-            {
-                auto current{ pressButtonOnValue(button, value) };
-
-                if (current == target)
-                {
-                    std::println("Found with {} presses.", buttonPresses);
-                    return buttonPresses;
-                }
-
-                if (anyValueHasOverrun(current.values, target.values))
-                {
-                    continue;
-                }
-
-                if (!seen.contains(current))
-                {
-                    seen.insert(current);
-                    nextValues.push_back(current);
-                }
-            }
-        }
-
-        std::swap(currentValues, nextValues);
-        nextValues.clear(); 
-     }
-
-    throw std::runtime_error(
-        "Possible values exhausted before target was found.");
+    Solver solver(target, buttons);
+    return solver.solve();
 }
 
 int buttonPressesRequired(auto manualLine)
@@ -219,20 +210,20 @@ int buttonPressesRequired(auto manualLine)
 namespace day10::part2
 {
 
-std::string solve()
-{
-    auto file{ common::readEntireInputFile("day10.txt") };
-    auto lines{ common::splitStringOn(file, '\n') };
-
-    int sum{};
-
-    for (auto line : lines)
+    std::string solve()
     {
-        sum += buttonPressesRequired(line);
-    }
+        auto file{ common::readEntireInputFile("day10.txt") };
+        auto lines{ common::splitStringOn(file, '\n') };
 
-    return std::to_string(sum);
-}
+        int sum{};
+
+        for (auto line : lines)
+        {
+            sum += buttonPressesRequired(line);
+        }
+
+        return std::to_string(sum);
+    }
 
 } // namespace day10::part2
 
